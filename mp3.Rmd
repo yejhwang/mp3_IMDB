@@ -36,6 +36,8 @@ WHERE info_type_id = 3 AND info = 'Western' AND kind='movie';")
 ```
 
 ```{r}
+#SELECT t.title, t.production_year, series_years, keyword
+
 west2<- db %>%
   dbGetQuery("SELECT mi.info_type_id, mi.info,mi2.info_type_id, mi2.info,mi1x.info_type_id, mi1x.info,mi2x.info_type_id, mi2x.info
 FROM title t
