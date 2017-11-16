@@ -1,0 +1,56 @@
+---
+title: "mp3"
+author: "Yejin Hwang"
+date: "11/16/2017"
+output: html_document
+---
+
+```{r}
+library(mdsr)
+library(RMySQL)
+db <- dbConnect_scidb(dbname = "imdb")
+dbListTables(db)
+```
+```{r}
+dbListFields(db,"title")
+```
+```{r}
+titles <- dbGetQuery(db, "SELECT * FROM title LIMIT 0,100;")
+View(titles)
+
+db %>%
+  tbl("title") %>%
+  head(3)
+```
+
+```{r}
+west<- db %>%
+  dbGetQuery("SELECT  mi.movie_id, title, production_year
+FROM movie_info mi
+LEFT JOIN title t ON mi.movie_id = t.id
+LEFT JOIN kind_type kt ON kind_id =  kt.id
+WHERE info_type_id = 3 AND info = 'Western' AND kind='movie';")
+#save(west,file="Westerns.rda")
+#load("Westerns.rda")
+#ggplot(west,aes(x=production_year, y=))
+```
+
+```{r}
+west2<- db %>%
+  dbGetQuery("SELECT mi.info_type_id, mi.info,mi2.info_type_id, mi2.info,mi1x.info_type_id, mi1x.info,mi2x.info_type_id, mi2x.info
+FROM title t
+JOIN movie_info AS mi ON t.id = mi.movie_id
+JOIN movie_info mi2 ON mi2.movie_id=t.id
+JOIN movie_keyword mk on t.id = mk.movie_id
+JOIN keyword k ON mk.keyword_id
+JOIN movie_info_idx AS mi1x ON mi1x.movie_id = t.id
+JOIN movie_info_idx AS mi2x ON mi2x.movie_id = t.id
+LEFT JOIN kind_type kt ON kind_id =  kt.id
+WHERE mi.info_type_id = 3 AND mi.info='Western' 
+AND mi2.info_type_id=4 AND mi2.info='English'
+AND kind='movie'
+AND t.kind_id = 1
+  AND mi1x.info_type_id = 100
+  AND mi2x.info_type_id = 101
+  AND mi1x.info > 100000
+ORDER BY mi2x.info desc;")
