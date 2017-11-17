@@ -115,4 +115,7 @@ tbl <- mutate(tbl, percent = num_westerns / num_films)
 library(ggplot2)
 
 ggplot(tbl, aes(x =production_year, y =percent)) + geom_point() +geom_smooth()
-# as the graph shows, in the 19th century, the western movie was popular.Especially around 1940. also, the Westerns movies gradually less after 1950.```
+# as the graph shows, in the 19th century, the western movie was popular.Especially around 1940. also, the Westerns movies gradually less after 1950.
+
+```
+#try push 
