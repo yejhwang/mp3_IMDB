@@ -1,6 +1,6 @@
 ---
 title: "mp3"
-author: "Yejin Hwang"
+author: "Yejin Hwang, Lisa Chen"
 date: "11/16/2017"
 output: html_document
 ---
@@ -56,3 +56,66 @@ AND t.kind_id = 1
   AND mi2x.info_type_id = 101
   AND mi1x.info > 100000
 ORDER BY mi2x.info desc;")
+```
+```{r}
+
+# filter out non_movies
+movie <- db %>%
+  dbGetQuery(" SELECT *
+               FROM title
+               where kind_id = 1;
+             ")
+```
+
+
+
+
+
+
+
+```{r}
+
+q1 <- db %>%
+  dbGetQuery(" SELECT production_year, count(*) as num_films
+               FROM title
+               WHERE kind_id = 1
+               GROUP BY production_year;
+             ")
+```
+
+
+
+
+
+```{r}
+
+q2 <- db %>%
+  dbGetQuery(" SELECT t.production_year, count(*) as num_westerns
+               FROM title t , movie_info mi
+               WHERE t.kind_id = 1 and t.id = mi.movie_id and mi.info LIKE '%Westerns%'
+               Order BY t.production_year;
+             ")
+View(q2)
+```
+
+
+
+```{r}
+
+tbl <- merge(x = q1, y = q2, by = "production_year", all = TRUE)
+
+tbl <- mutate(tbl, percent = num_westerns / num_films)
+```
+
+
+
+```{r}
+
+
+library(ggplot2)
+
+ggplot(tbl, aes(x =production_year, y =percent)) + geom_point() +geom_smooth()
+# as the graph shows, in the 19th century, the western movie was popular.Especially around 1940. also, the Westerns movies gradually less after 1950.
+
+```
+#try push 
