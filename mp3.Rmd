@@ -58,6 +58,30 @@ AND t.kind_id = 1
 ORDER BY mi2x.info desc;")
 ```
 ```{r}
+west3<- db %>%
+  dbGetQuery("SELECT t.title, t.production_year, series_years, keyword, kind, mi1x.info, mi2x.info, mi3x.info , mi4x.info
+FROM title t
+JOIN movie_info mi ON t.id = mi.movie_id
+JOIN movie_info mi2 ON mi2.movie_id=t.id
+JOIN movie_keyword mk ON t.id = mk.movie_id
+JOIN keyword k ON k.id=mk.keyword_id
+JOIN movie_info_idx AS mi1x ON mi1x.movie_id = t.id
+JOIN movie_info_idx AS mi2x ON mi2x.movie_id = t.id
+JOIN movie_info_idx AS mi3x ON mi3x.movie_id = t.id
+JOIN movie_info_idx AS mi4x ON mi4x.movie_id = t.id
+LEFT JOIN kind_type kt ON kind_id =  kt.id
+WHERE mi.info_type_id = 3 AND mi.info='Western' 
+AND mi2.info_type_id=4 AND mi2.info='English'
+AND kind='movie' OR kind='tv movie'
+  AND mi1x.info_type_id = 100
+  AND mi2x.info_type_id = 101
+  AND mi3x.info_type_id = 105
+  AND mi4x.info_type_id = 107
+  AND mi1x.info > 100000
+GROUP BY t.title, t.production_year
+ORDER BY mi2x.info desc;")
+```
+```{r}
 
 # filter out non_movies
 movie <- db %>%
