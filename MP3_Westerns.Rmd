@@ -74,7 +74,15 @@ What might account for this, and does the IMDB define a Western in the 1950 in t
 *To explore the first part of this question, the budget of Western movies was observed*
 ```{r}
 load("westM.rda")
+```
+```{r}
 currency <- c("£","DEM","CAD","FIM","ESP", "AUD",  "AEP","BRL","€","DKK","MXN", "CNY","HRK","NZD", "HKD", "INR","CLP", "ILS","NOK", "RUR","CZK", "ZAR","ARS", "MAD", "SEK")
+filCur <- function(x){
+filter(!grepl(x,budget)) }
+
+westBudget <- westM %>%
+  select(title, production_year, budget) %>%
+  lapply(currency,FUN = filCur)
 ```
 ```{r}
 westBudget <- westM %>%
@@ -91,6 +99,13 @@ westBudget <- westM %>%
   filter(!grepl("SEK",budget)) 
 ```
 ```{r}
+westBudget<-westM %>%
+  select(title, production_year, budget) %>%
+  mutate(Budget = parse_number(budget))
+
+ggplot(westBudget,aes(x=production_year, y=Budget)) +
+  geom_point()
+
 ```
 ##Graph B
 ###Graph Title
