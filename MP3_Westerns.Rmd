@@ -1,0 +1,100 @@
+---
+title: "Westerns"
+author: "Yejin Hwang"
+date: "11/21/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(mdsr)
+library(RMySQL)
+db <- dbConnect_scidb(dbname = "imdb")
+```
+
+```{r, eval=FALSE}
+genreBudget <- db %>%
+  dbGetQuery("SELECT title, production_year, mi1.info AS genre, mi2.info AS budget
+FROM title t
+JOIN movie_info mi1 ON mi1.movie_id = t.id
+JOIN movie_info mi2 ON mi2.movie_id = t.id
+WHERE t.kind_id = 1
+AND mi1.info_type_id = 3
+AND mi2.info_type_id = 105
+AND production_year BETWEEN 1900 AND 2015;
+")
+
+genreBudget <- genreBudget %>%
+  mutate(isWest = ifelse(genre == 'Western',TRUE,FALSE))
+westM <- genreBudget %>%
+  filter(isWest == TRUE)
+numM <- genreBudget %>%
+  group_by(title, production_year) %>%
+  do(head(.,n=1))
+numM2 <- numM %>%
+  group_by(production_year) %>%
+  summarise(N = n())
+numWest <- westM %>%
+  group_by(production_year) %>%
+  summarise(NW = n())
+perWest <- numM2 %>%
+  left_join(numWest, by = c("production_year"="production_year")) %>%
+  mutate(percentage = NW/N*100)
+save(perWest,file="perWest.rda")
+```
+
+```{r}
+load("perWest.rda")
+```
+```{r, message=FALSE}
+graphA <- ggplot(perWest,aes(x = production_year, y = percentage)) + 
+  geom_point() +
+  geom_smooth() +
+  geom_line(aes(x = production_year, y=NW),color = "green") + 
+  labs(x = "Production Year", y="Percentage of Western Movies (%)") +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Number of Western Movies"))
+
+graphA
+```
+
+```{r}
+#To see number of keywords in 1950 & 2000
+
+dbGetQuery("SELECT production_year, COUNT(keyword)
+FROM title t
+JOIN movie_keyword mk ON t.id = mk.movie_id
+JOIN keyword k ON k.id=mk.keyword_id
+JOIN movie_info mi ON t.id = mi.movie_id
+WHERE t.kind_id = 1
+AND mi.info_type_id = 3 AND mi.info = 'Western'
+AND production_year IN (1950,2000)
+GROUP BY production_year;")
+
+#For all the years
+dbGetQuery("SELECT production_year, keyword, COUNT(*)
+FROM title t
+JOIN movie_keyword mk ON t.id = mk.movie_id
+JOIN keyword k ON k.id=mk.keyword_id
+JOIN movie_info mi ON t.id = mi.movie_id
+WHERE t.kind_id = 1
+AND mi.info_type_id = 3 AND mi.info = 'Western'
+GROUP BY production_year, keyword
+HAVING COUNT(*)>10;")
+
+#2000 seems to have less keywords & more "independent-film" than 1950s
+dbGetQuery("SELECT production_year, keyword, COUNT(*)
+FROM title t
+JOIN movie_keyword mk ON t.id = mk.movie_id
+JOIN keyword k ON k.id=mk.keyword_id
+JOIN movie_info mi ON t.id = mi.movie_id
+WHERE t.kind_id = 1
+AND mi.info_type_id = 3 AND mi.info = 'Western'
+AND production_year IN (1950,2000)
+GROUP BY production_year, keyword
+HAVING COUNT(*)>5;")
+
+
+```
+
+
+
