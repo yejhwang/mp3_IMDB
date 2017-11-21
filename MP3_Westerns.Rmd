@@ -76,13 +76,19 @@ What might account for this, and does the IMDB define a Western in the 1950 in t
 load("westM.rda")
 ```
 ```{r}
-currency <- c("£","DEM","CAD","FIM","ESP", "AUD",  "AEP","BRL","€","DKK","MXN", "CNY","HRK","NZD", "HKD", "INR","CLP", "ILS","NOK", "RUR","CZK", "ZAR","ARS", "MAD", "SEK")
+currency <- c("£","DEM","CAD","FIM","ESP", "AUD",  "AEP","BRL","€","DKK","MXN", "CNY","HRK","NZD", "HKD", "INR","CLP", "ILS","NOK", "RUR","CZK", "ZAR","ARS", "MAD","ITL","FRF","SEK")
 filCur <- function(x){
 filter(!grepl(x,budget)) }
 
 westBudget <- westM %>%
   select(title, production_year, budget) %>%
   lapply(currency,FUN = filCur)
+```
+
+```{r}
+westBudget <- westM %>%
+  select(title, production_year, budget) %>%
+  filter(!grepl(paste(currency, collapse = "|"),budget))
 ```
 ```{r}
 westBudget <- westM %>%
@@ -95,13 +101,13 @@ westBudget <- westM %>%
   filter(!grepl("AUD",budget)) %>%
   filter(!grepl("AEP",budget)) %>%
   filter(!grepl("BRL",budget)) %>%
-  filter(!grepl("€",budget)) %>%filter(!grepl("DKK",budget)) %>%filter(!grepl("MXN",budget)) %>%filter(!grepl("CNY",budget)) %>%filter(!grepl("HRK",budget)) %>%filter(!grepl("NZD",budget)) %>%filter(!grepl("HKD",budget)) %>%filter(!grepl("INR",budget)) %>%filter(!grepl("CLP",budget)) %>%filter(!grepl("ILS",budget)) %>%filter(!grepl("NOK",budget)) %>%filter(!grepl("RUR",budget)) %>%filter(!grepl("CZK",budget)) %>%filter(!grepl("ZAR",budget)) %>%filter(!grepl("ARS",budget)) %>%filter(!grepl("MAD",budget)) %>%
+  filter(!grepl("€",budget)) %>%filter(!grepl("DKK",budget)) %>%filter(!grepl("MXN",budget)) %>%filter(!grepl("CNY",budget)) %>%filter(!grepl("HRK",budget)) %>%filter(!grepl("NZD",budget)) %>%filter(!grepl("HKD",budget)) %>%filter(!grepl("INR",budget)) %>%filter(!grepl("CLP",budget)) %>%filter(!grepl("ILS",budget)) %>%filter(!grepl("NOK",budget)) %>%filter(!grepl("RUR",budget)) %>%filter(!grepl("CZK",budget)) %>%filter(!grepl("ZAR",budget)) %>%filter(!grepl("ARS",budget)) %>%filter(!grepl("MAD",budget)) %>%filter(!grepl("ITL",budget)) %>%filter(!grepl("FRF",budget)) %>%
   filter(!grepl("SEK",budget)) 
 ```
 ```{r}
-westBudget<-westM %>%
-  select(title, production_year, budget) %>%
-  mutate(Budget = parse_number(budget))
+westBudget<-westBudget %>%
+  mutate(Budget = parse_number(budget)) %>%
+  filter
 
 ggplot(westBudget,aes(x=production_year, y=Budget)) +
   geom_point()
