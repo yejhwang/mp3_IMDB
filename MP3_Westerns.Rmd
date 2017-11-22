@@ -59,69 +59,90 @@ graphA <- ggplot(perWest,aes(x = production_year, y = percentage)) +
   annotate("text", x = 2005, y = 105, label = "110 Westerns\nin 2015",colour = "navy", size = 3,family = "PT Sans") +
   geom_point(x=1950, y=12,shape=21, fill="white")+
   annotate("text", x = 1950, y = 25, label = "12 Westerns\n14% of total\nin 1950",colour = "navy", size = 3,family = "PT Sans")+
-  scale_y_continuous(expand=c(0,0),breaks=seq(0,90,30), labels = c("0%","30%","60%","90%"),sec.axis = sec_axis(~.*1, name = "Number of Western Movies"))
+  scale_y_continuous(expand=c(0,0),breaks=seq(0,90,30), labels = c("0%","30%","60%","90%"),sec.axis = sec_axis(~.*1, name = "Number of Western Movies"))+ 
+  theme(axis.title.y = element_text(colour = "blue"),axis.text.y = element_text(color = "blue"), axis.text.y.right = element_text(color = "purple"),axis.title.y.right = element_text(colour = "purple"))
 ```
-##Graph A - Show more top y grid, make axis title the color of its graph
-##When click on graph switch geom_smooth to geom_point -- plotly??
-###Graph Title
-```{r, message=FALSE}
+###Graph A
+##Percentage and Number of Western Films Over Time
+```{r, message=FALSE,echo=FALSE}
 graphA
 ```
-The Western is a central U.S. genre, not just to Hollywood and mainstream film (think Stagecoach, 1939 and The Searchers, 1956), but also to independent film production (Brokeback Mountain, 2005). Film critics have pronounced the Western dead repeatedly, and, so far, always wrongly. Between 1900 and 2015, when and how has Western film production peaked and ebbed? 
-*Western film production may seem to have increased drastically in the 2000s but when considering the overall film industry, the percentage of Western films has slowly decreased.* 
+
+
+"The Western is a central U.S. genre, not just to Hollywood and mainstream film (think Stagecoach, 1939 and The Searchers, 1956), but also to independent film production (Brokeback Mountain, 2005). Film critics have pronounced the Western dead repeatedly, and, so far, always wrongly. Between 1900 and 2015, when and how has Western film production peaked and ebbed?"
+
+**Western film production may seem to have increased drastically in the 2000s but when considering the overall film industry, the percentage of Western films has slowly decreased.**
+
 *With the advancement of technology in the late 1990s through the 2000s, there was an exponential growth in movie production. While there was a greater amount of Westerns produced because of this, the percentage of Westerns each year in the 2000s did not reach 1%. Thus, it can be observed that after 1950, Western film production gradually ebbed.*
-What might account for this, and does the IMDB define a Western in the 1950 in the same way as it does in 2000?
-*To explore the first part of this question, the budget of Western movies was observed*
-```{r}
+
+
+
+"What might account for this, and does the IMDB define a Western in the 1950 in the same way as it does in 2000?"
+
+**To explore the first part of this question, the budget of Western movies was observed**
+
+```{r,echo=FALSE}
 load("westM.rda")
-```
-```{r}
+
 currency <- c("£","DEM","CAD","FIM","ESP", "AUD",  "AEP","BRL","€","DKK","MXN", "CNY","HRK","NZD", "HKD", "INR","CLP", "ILS","NOK", "RUR","CZK", "ZAR","ARS", "MAD","ITL","FRF","SEK")
-filCur <- function(x){
-filter(!grepl(x,budget)) }
-
-westBudget <- westM %>%
-  select(title, production_year, budget) %>%
-  lapply(currency,FUN = filCur)
-```
-
-```{r}
-westBudget <- westM %>%
-  select(title, production_year, budget) %>%
-  filter(!grepl(paste(currency, collapse = "|"),budget))
 ```
 ```{r}
 westBudget <- westM %>%
   select(title, production_year, budget) %>%
-  filter(!grepl("£",budget)) %>%
-  filter(!grepl("DEM",budget)) %>%
-  filter(!grepl("CAD",budget)) %>%
-  filter(!grepl("FIM",budget)) %>%
-  filter(!grepl("ESP",budget)) %>%
-  filter(!grepl("AUD",budget)) %>%
-  filter(!grepl("AEP",budget)) %>%
-  filter(!grepl("BRL",budget)) %>%
-  filter(!grepl("€",budget)) %>%filter(!grepl("DKK",budget)) %>%filter(!grepl("MXN",budget)) %>%filter(!grepl("CNY",budget)) %>%filter(!grepl("HRK",budget)) %>%filter(!grepl("NZD",budget)) %>%filter(!grepl("HKD",budget)) %>%filter(!grepl("INR",budget)) %>%filter(!grepl("CLP",budget)) %>%filter(!grepl("ILS",budget)) %>%filter(!grepl("NOK",budget)) %>%filter(!grepl("RUR",budget)) %>%filter(!grepl("CZK",budget)) %>%filter(!grepl("ZAR",budget)) %>%filter(!grepl("ARS",budget)) %>%filter(!grepl("MAD",budget)) %>%filter(!grepl("ITL",budget)) %>%filter(!grepl("FRF",budget)) %>%
-  filter(!grepl("SEK",budget)) 
+  filter(!grepl(paste(currency, collapse = "|"),budget)) %>%
+  mutate(Budget = parse_number(budget)) 
+
+medBudget<-westBudget %>%
+  group_by(production_year) %>%
+  summarise(middle = median(Budget)) %>%
+  mutate(bud = middle/10^6)
+
+graphB <- ggplot(medBudget,aes(x=production_year, y=bud)) +
+  geom_point()+ 
+  labs(x = "Production Year", y="Median Budget\n(in Millions)") +
+  scale_y_continuous(labels = scales::dollar_format())
+```
+
+###Graph B
+##Median Budget of Western Films 
+```{r,echo=FALSE, message = FALSE, warning=FALSE}
+graphB
+```
+
+
+**While the Median Budget grew exponentially from the 1950s to the 2000s, there is a drastic drop that continues throughout the beginning of the 21st century.**
+
+When looking at the keywords describing the movies in 1950 and 2000, we can hypothesize that the sudden drop in the budget may be accounted for by Westerns being produced as independent film.
+
+```{r,eval=FALSE}
+key1950and2000 <- db%>%dbGetQuery("SELECT production_year, keyword, COUNT(*)
+FROM title t
+JOIN movie_keyword mk ON t.id = mk.movie_id
+JOIN keyword k ON k.id=mk.keyword_id
+JOIN movie_info mi ON t.id = mi.movie_id
+WHERE t.kind_id = 1
+AND mi.info_type_id = 3 AND mi.info = 'Western'
+AND production_year IN (1950,2000)
+GROUP BY production_year, keyword
+HAVING COUNT(*)>5;")
+inde<- key1950and2000 %>%
+  group_by(production_year) %>%
+  do(head(.,n=3))
+save(inde,file ="inde.rda")
 ```
 ```{r}
-westBudget<-westBudget %>%
-  mutate(Budget = parse_number(budget)) %>%
-  filter
-
-ggplot(westBudget,aes(x=production_year, y=Budget)) +
-  geom_point()
-
+load("inde.rda")
+independent
 ```
-##Graph B
-###Graph Title
 
-*to 
-[NYTimes](http://www.nytimes.com/2007/11/10/magazine/11schatz.html)
 
-```{r, eval=FALSE}
+While 6 Western films in 2000 was labeled "independent-film", non were labeled as such in 1950. Thus, this supports the hypothesis that the sudden drop in budget was due to the increase in independent films for Western movies.
+
+**With the smaller 
+
+```{r}
 #To compare the number of keywords in 1950 & 2000
-numKey <- dbGetQuery("SELECT production_year, COUNT(keyword)
+numKey <- db %>% dbGetQuery("SELECT production_year, COUNT(keyword)
 FROM title t
 JOIN movie_keyword mk ON t.id = mk.movie_id
 JOIN keyword k ON k.id=mk.keyword_id
@@ -130,9 +151,10 @@ WHERE t.kind_id = 1
 AND mi.info_type_id = 3 AND mi.info = 'Western'
 AND production_year IN (1950,2000)
 GROUP BY production_year;")
-view(numKey)
-
-
+numKey
+```
+There were less keywords in 2000
+```{r,include=FALSE}
 #For all the years
 keyByYr <- dbGetQuery("SELECT production_year, keyword, COUNT(*)
 FROM title t
@@ -143,21 +165,8 @@ WHERE t.kind_id = 1
 AND mi.info_type_id = 3 AND mi.info = 'Western'
 GROUP BY production_year, keyword
 HAVING COUNT(*)>10;")
-
-#2000 seems to have less keywords & more "independent-film" than 1950s
-key1950and2000 <- dbGetQuery("SELECT production_year, keyword, COUNT(*)
-FROM title t
-JOIN movie_keyword mk ON t.id = mk.movie_id
-JOIN keyword k ON k.id=mk.keyword_id
-JOIN movie_info mi ON t.id = mi.movie_id
-WHERE t.kind_id = 1
-AND mi.info_type_id = 3 AND mi.info = 'Western'
-AND production_year IN (1950,2000)
-GROUP BY production_year, keyword
-HAVING COUNT(*)>5;")
-
-
 ```
 
 
 
+"What might account for this, and does the IMDB define a Western in the 1950 in the same way as it does in 2000?"
