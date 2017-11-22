@@ -1,145 +1,156 @@
 ---
-title: "mp3"
-author: "Yejin Hwang, Lisa Chen"
-date: "11/16/2017"
+title: "Westerns Over Time"
+author: "Yejin Hwang"
+date: "11/21/2017"
 output: html_document
 ---
 
-```{r}
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(mdsr)
 library(RMySQL)
 db <- dbConnect_scidb(dbname = "imdb")
-dbListTables(db)
-```
-```{r}
-dbListFields(db,"title")
-```
-```{r}
-titles <- dbGetQuery(db, "SELECT * FROM title LIMIT 0,100;")
-View(titles)
-
-db %>%
-  tbl("title") %>%
-  head(3)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
 ```
 
-```{r}
-west<- db %>%
-  dbGetQuery("SELECT  mi.movie_id, title, production_year
-FROM movie_info mi
-LEFT JOIN title t ON mi.movie_id = t.id
-LEFT JOIN kind_type kt ON kind_id =  kt.id
-WHERE info_type_id = 3 AND info = 'Western' AND kind='movie';")
-#save(west,file="Westerns.rda")
-#load("Westerns.rda")
-#ggplot(west,aes(x=production_year, y=))
-```
-
-```{r}
-#SELECT t.title, t.production_year, series_years, keyword
-
-west2<- db %>%
-  dbGetQuery("SELECT mi.info_type_id, mi.info,mi2.info_type_id, mi2.info,mi1x.info_type_id, mi1x.info,mi2x.info_type_id, mi2x.info
+```{r, eval=FALSE}
+genreBudget <- db %>%
+  dbGetQuery("SELECT title, production_year, mi1.info AS genre, mi2.info AS budget
 FROM title t
-JOIN movie_info AS mi ON t.id = mi.movie_id
-JOIN movie_info mi2 ON mi2.movie_id=t.id
-JOIN movie_keyword mk on t.id = mk.movie_id
-JOIN keyword k ON mk.keyword_id
-JOIN movie_info_idx AS mi1x ON mi1x.movie_id = t.id
-JOIN movie_info_idx AS mi2x ON mi2x.movie_id = t.id
-LEFT JOIN kind_type kt ON kind_id =  kt.id
-WHERE mi.info_type_id = 3 AND mi.info='Western' 
-AND mi2.info_type_id=4 AND mi2.info='English'
-AND kind='movie'
-AND t.kind_id = 1
-  AND mi1x.info_type_id = 100
-  AND mi2x.info_type_id = 101
-  AND mi1x.info > 100000
-ORDER BY mi2x.info desc;")
+JOIN movie_info mi1 ON mi1.movie_id = t.id
+JOIN movie_info mi2 ON mi2.movie_id = t.id
+WHERE t.kind_id = 1
+AND mi1.info_type_id = 3
+AND mi2.info_type_id = 105
+AND production_year BETWEEN 1900 AND 2015;
+")
+#efficient SQL queries: making use of an index column with t.kind_id = 1
+#t.kind_id = 1 specifies for only Movies rather than TV shows or TV movies
+
+#============= Saving dataframe with percentage of Westerns over all films =======
+genreBudget <- genreBudget %>%
+  mutate(isWest = ifelse(genre == 'Western',TRUE,FALSE))
+westM <- genreBudget %>%
+  filter(isWest == TRUE)
+numM <- genreBudget %>%
+  group_by(title, production_year) %>%
+  do(head(.,n=1))
+numM2 <- numM %>%
+  group_by(production_year) %>%
+  summarise(N = n())
+numWest <- westM %>%
+  group_by(production_year) %>%
+  summarise(NW = n())
+perWest <- numM2 %>%
+  left_join(numWest, by = c("production_year"="production_year")) %>%
+  mutate(percentage = NW/N*100)
+save(perWest,file="perWest.rda")
+save(westM, file="westM.rda")
+```
+
+```{r,echo=FALSE}
+load("perWest.rda")
 ```
 ```{r}
-west3<- db %>%
-  dbGetQuery("SELECT t.title, t.production_year, series_years, keyword, kind, mi1x.info, mi2x.info, mi3x.info , mi4x.info
+graphA <- ggplot(perWest,aes(x = production_year, y = percentage)) + 
+  #geom_point()+
+  geom_smooth() +
+  geom_line(aes(x = production_year, y=NW),color = "purple") + 
+  labs(x = "Production Year", y="Percentage of Western Movies (%)") + geom_point(x=2015, y=110,shape=21, fill="white")+
+  annotate("text", x = 2005, y = 105, label = "110 Westerns\nin 2015",colour = "navy", size = 3,family = "PT Sans") +
+  geom_point(x=1950, y=12,shape=21, fill="white")+
+  annotate("text", x = 1950, y = 25, label = "12 Westerns\n14% of total\nin 1950",colour = "navy", size = 3,family = "PT Sans")+
+  scale_y_continuous(expand=c(0,0),breaks=seq(0,90,30), labels = c("0%","30%","60%","90%"),sec.axis = sec_axis(~.*1, name = "Number of Western Movies"))+ 
+  theme(axis.title.y = element_text(colour = "blue"),axis.text.y = element_text(color = "blue"), axis.text.y.right = element_text(color = "purple"),axis.title.y.right = element_text(colour = "purple"))
+```
+###Graph A
+##Percentage and Number of Western Films Over Time
+```{r, message=FALSE,echo=FALSE,warning=FALSE}
+graphA
+```
+
+
+"The Western is a central U.S. genre, not just to Hollywood and mainstream film (think Stagecoach, 1939 and The Searchers, 1956), but also to independent film production (Brokeback Mountain, 2005). Film critics have pronounced the Western dead repeatedly, and, so far, always wrongly. Between 1900 and 2015, when and how has Western film production peaked and ebbed?"
+
+**Western film production may seem to have increased drastically in the 2000s but when considering the overall film industry, the percentage of Western films has slowly decreased.**
+
+*With the advancement of technology in the late 1990s through the 2000s, there was an exponential growth in movie production. While there was a greater amount of Westerns produced because of this, the percentage of Westerns each year in the 2000s did not reach 1%. Thus, it can be observed that after 1950, Western film production gradually ebbed.*
+
+
+
+"What might account for this, and does the IMDB define a Western in the 1950 in the same way as it does in 2000?"
+
+**To explore the first part of this question, the budget of Western movies was observed**
+
+```{r,echo=FALSE}
+load("westM.rda")
+
+currency <- c("£","DEM","CAD","FIM","ESP", "AUD",  "AEP","BRL","€","DKK","MXN", "CNY","HRK","NZD", "HKD", "INR","CLP", "ILS","NOK", "RUR","CZK", "ZAR","ARS", "MAD","ITL","FRF","SEK")
+```
+```{r}
+#=============== Focusing on Western films and their Budget =============
+westBudget <- westM %>%
+  select(title, production_year, budget) %>%
+  filter(!grepl(paste(currency, collapse = "|"),budget)) %>%
+  mutate(Budget = parse_number(budget)) 
+
+medBudget<-westBudget %>%
+  group_by(production_year) %>%
+  summarise(middle = median(Budget)) %>%
+  mutate(bud = middle/10^6)
+
+graphB <- ggplot(medBudget,aes(x=production_year, y=bud)) +
+  geom_point()+ 
+  labs(x = "Production Year", y="Median Budget\n(in Millions)") +
+  scale_y_continuous(labels = scales::dollar_format())
+```
+
+###Graph B
+##Median Budget of Western Films 
+```{r,echo=FALSE, message = FALSE, warning=FALSE}
+graphB
+```
+
+
+**While the Median Budget grew exponentially from the 1950s to the 2000s, there is a drastic drop that continues throughout the beginning of the 21st century.**
+
+When looking at the keywords describing the movies in 1950 and 2000, we can hypothesize that the sudden drop in the budget may be accounted for by Westerns being produced as independent film.
+
+```{r,eval=FALSE}
+key1950and2000 <- db%>%dbGetQuery("SELECT production_year, keyword, COUNT(*)
 FROM title t
-JOIN movie_info mi ON t.id = mi.movie_id
-JOIN movie_info mi2 ON mi2.movie_id=t.id
 JOIN movie_keyword mk ON t.id = mk.movie_id
 JOIN keyword k ON k.id=mk.keyword_id
-JOIN movie_info_idx AS mi1x ON mi1x.movie_id = t.id
-JOIN movie_info_idx AS mi2x ON mi2x.movie_id = t.id
-JOIN movie_info_idx AS mi3x ON mi3x.movie_id = t.id
-JOIN movie_info_idx AS mi4x ON mi4x.movie_id = t.id
-LEFT JOIN kind_type kt ON kind_id =  kt.id
-WHERE mi.info_type_id = 3 AND mi.info='Western' 
-AND mi2.info_type_id=4 AND mi2.info='English'
-AND kind='movie' OR kind='tv movie'
-  AND mi1x.info_type_id = 100
-  AND mi2x.info_type_id = 101
-  AND mi3x.info_type_id = 105
-  AND mi4x.info_type_id = 107
-  AND mi1x.info > 100000
-GROUP BY t.title, t.production_year
-ORDER BY mi2x.info desc;")
+JOIN movie_info mi ON t.id = mi.movie_id
+WHERE t.kind_id = 1
+AND mi.info_type_id = 3 AND mi.info = 'Western'
+AND production_year IN (1950,2000)
+GROUP BY production_year, keyword
+HAVING COUNT(*)>5;")
+inde<- key1950and2000 %>%
+  group_by(production_year) %>%
+  do(head(.,n=3))
+save(inde,file ="inde.rda")
 ```
-```{r}
-
-# filter out non_movies
-movie <- db %>%
-  dbGetQuery(" SELECT *
-               FROM title
-               where kind_id = 1;
-             ")
+```{r,echo=FALSE}
+load("inde.rda")
+inde
 ```
 
 
+While 6 Western films in 2000 was labeled "independent-film", none were labeled as such in 1950. Thus, this supports the hypothesis that the sudden drop in budget was due to the increase in independent films for Western movies.
+
+**The peak in the number of Western films, and the slow ebbing of the percentage of Westerns in the 2000s is due to the smaller budget, and the trend towards independent films for Westerns. Through the keywords, we see the possible change of the IMDB definition of a Western from being set in the 1880s, to more commonly being an independent film.**
+
+*It is useful to understand some background of the film industry, and how Westerns became a genre of its own. *
+
+**Westerns played a vital role as a popular narrative form, and one that would comprise "nearly a fifth of all feature films from the silent era through the 1950s".**
+**The popularity and physical requirements of the genre, especially locations, led the film industry to migrate to Hollywood after 1910. Because the first films were shot outdoors or on open-air stages, along with the requirements of early film stock and cameras, the Western was the perfect fit.**
+**This low-cost, formulaic genre may account for the more contemporary trend and definition of a Western being an independent film as they run on a smaller budget.**
+[NYTimes](http://www.nytimes.com/2007/11/10/magazine/11schatz.html) 
 
 
 
-
-
-```{r}
-
-q1 <- db %>%
-  dbGetQuery(" SELECT production_year, count(*) as num_films
-               FROM title
-               WHERE kind_id = 1
-               GROUP BY production_year;
-             ")
-```
-
-
-
-
-
-```{r}
-
-q2 <- db %>%
-  dbGetQuery(" SELECT t.production_year, count(*) as num_westerns
-               FROM title t , movie_info mi
-               WHERE t.kind_id = 1 and t.id = mi.movie_id and mi.info LIKE '%Westerns%'
-               Order BY t.production_year;
-             ")
-View(q2)
-```
-
-
-
-```{r}
-
-tbl <- merge(x = q1, y = q2, by = "production_year", all = TRUE)
-
-tbl <- mutate(tbl, percent = num_westerns / num_films)
-```
-
-
-
-```{r}
-
-
-library(ggplot2)
-
-ggplot(tbl, aes(x =production_year, y =percent)) + geom_point() +geom_smooth()
-# as the graph shows, in the 19th century, the western movie was popular.Especially around 1940. also, the Westerns movies gradually less after 1950.
-
-```
-#try push 
+[GitHub repository link](https://github.com/yejhwang/mp3_IMDB.git)
